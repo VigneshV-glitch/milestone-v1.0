@@ -1,0 +1,134 @@
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap');
+@import "tailwindcss";
+
+@custom-variant dark (&:is(.dark *));
+
+@theme {
+  --color-brand-dark: #2c3e50;
+  --color-brand-light: #34495e;
+  --color-brand-accent: #295DAA;
+  --color-brand-tooltip: #234a8a;
+  --color-brand-text: #ecf0f1;
+  --color-status-green: #10b981;
+  --color-status-yellow: #f59e0b;
+  --color-status-red: #ef4444;
+  
+  --color-primary-50: #eef4fc;
+  --color-primary-100: #dce7f9;
+  --color-primary-200: #bed6f3;
+  --color-primary-300: #a0c4ed;
+  --color-primary-400: #82b3e8;
+  --color-primary-500: #64a1e2;
+  --color-primary-600: #458fdc;
+  --color-primary-700: #295DAA;
+  --color-primary-800: #234a8a;
+  --color-primary-900: #1d3d71;
+  --color-primary-950: #0a1628;
+
+  --font-sans: "Poppins", ui-sans-serif, system-ui, sans-serif;
+}
+
+@layer base {
+  @font-face {
+    font-family: 'Proxima Nova';
+    font-weight: 400;
+    src: url(/fonts/proxima-nova/400-regular.woff) format("woff");
+  }
+  @font-face {
+    font-family: 'Proxima Nova';
+    font-weight: 500;
+    src: url(/fonts/proxima-nova/500-medium.woff) format("woff");
+  }
+}
+
+body {
+  @apply bg-white dark:bg-[#121212] text-gray-900 dark:text-gray-100 transition-colors duration-200;
+  scrollbar-width: thin; 
+  scrollbar-color: #D1D5DB transparent; 
+}
+
+/* Animations */
+@keyframes fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+.animate-fade-in { animation: fade-in 0.3s ease-out forwards; }
+
+@keyframes slide-up {
+  from { transform: translateY(20px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+.animate-slide-up { animation: slide-up 0.4s ease-out forwards; }
+
+/* Scrollbar Styles */
+::-webkit-scrollbar { width: 4px; height: 4px; }
+::-webkit-scrollbar-track { background-color: transparent; }
+::-webkit-scrollbar-thumb {
+  background-color: #D1D5DB;
+  border-radius: 6px;
+  transition: background-color 0.2s ease-in-out;
+}
+::-webkit-scrollbar-thumb:hover { background-color: #9CA3AF; }
+
+/* Buttons */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-width: 1px;
+  border-color: transparent;
+  font-weight: 600;
+  border-radius: 0.375rem;
+  box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+  transition: all 200ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+.btn:focus-visible {
+  outline: 2px solid transparent;
+  outline-offset: 2px;
+}
+.btn:disabled {
+  background-color: #9ca3af !important;
+  cursor: not-allowed;
+  opacity: 0.75;
+}
+
+.btn-sm { padding: 0.375rem 0.75rem; font-size: 0.875rem; line-height: 1.25rem; }
+.btn-md { padding: 0.5rem 1rem; font-size: 0.875rem; line-height: 1.25rem; }
+.btn-primary { background-color: #295DAA; color: #ffffff; }
+.btn-primary:hover { background-color: #234a8a; }
+
+.btn-outline-primary {
+  background-color: transparent;
+  border-color: #295DAA;
+  color: #295DAA;
+}
+.btn-outline-primary:hover {
+  background-color: #295DAA;
+  color: #ffffff;
+}
+
+@keyframes slide-in-right {
+  from { transform: translateX(100%); }
+  to { transform: translateX(0); }
+}
+.animate-slide-in-right {
+  animation: slide-in-right 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+/* Hide standard webkit calendar indicator but make it stretch to cover the input for perfect click-to-open behavior */
+.hide-date-indicator {
+  position: relative;
+}
+.hide-date-indicator::-webkit-calendar-picker-indicator {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  cursor: pointer;
+}
+
+

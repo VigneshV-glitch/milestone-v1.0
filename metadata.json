@@ -1,0 +1,8 @@
+{
+  "name": "Mile_Stone v1.0 (without mock data)",
+  "description": "A layout and structure template with Sidebar, Header, and Tailwind CSS configuration based on user instructions.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
