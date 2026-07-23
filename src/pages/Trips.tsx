@@ -764,7 +764,7 @@ const Trips: React.FC = () => {
     setSelectedView("Default View");
   };
 
-  const handleEditSubmit = (e: React.FormEvent) => {
+  const handleEditSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!editingTrip) return;
 
@@ -812,10 +812,10 @@ const Trips: React.FC = () => {
     }
 
     // Save all basic trip fields first (origin, destination, date, etc.)
-    saveTrip(updatedTrip);
+    await saveTrip(updatedTrip);
 
     // Update resources (syncs driver and vehicle status)
-    const result = assignResources(updatedTrip.id, updatedTrip.vehicleNo, updatedTrip.driver);
+    const result = await assignResources(updatedTrip.id, updatedTrip.vehicleNo, updatedTrip.driver);
     if (!result.success) {
       showFeedback(result.error || "Failed to update trip resources", "error");
       return;
@@ -838,10 +838,10 @@ const Trips: React.FC = () => {
           status: "Open"
         };
         updatedTrip.delayEvents = [...(updatedTrip.delayEvents || []), resumptionEvent];
-        saveTrip(updatedTrip); // Save with the new event
+        await saveTrip(updatedTrip); // Save with the new event
       }
 
-      const statusResult = updateTripStatus(updatedTrip.id, targetStatus);
+      const statusResult = await updateTripStatus(updatedTrip.id, targetStatus);
       if (!statusResult.success) {
         showFeedback(statusResult.error || "Failed to update status", "error");
         return;
@@ -859,8 +859,8 @@ const Trips: React.FC = () => {
     setIsEditDrawerOpen(false);
   };
 
-  const handleBulkStatusUpdate = (status: string) => {
-    const res = bulkUpdateTripStatus(selectedTripIds, status);
+  const handleBulkStatusUpdate = async (status: string) => {
+    const res = await bulkUpdateTripStatus(selectedTripIds, status);
     if (res.success) {
       showFeedback(`Successfully updated ${selectedTripIds.length} trips to ${status}`, "success");
       setSelectedTripIds([]);
@@ -2170,14 +2170,14 @@ const Trips: React.FC = () => {
                 Cancel
               </button>
               <button
-                onClick={() => {
+                onClick={async () => {
                   const driver = drivers.find((d: any) => d.id === selectedDriverIdForModal);
                   if (!driver) {
                     showFeedback("Please select a valid driver.", "error");
                     return;
                   }
 
-                  const res = assignResources(selectedTripForAction.id, selectedTripForAction.vehicleNo, driver.name);
+                  const res = await assignResources(selectedTripForAction.id, selectedTripForAction.vehicleNo, driver.name);
                   if (res.success) {
                     showFeedback(`Operator ${driver.name} assigned to Trip ${selectedTripForAction.id} successfully.`, "success");
                     setActiveModal(null);
@@ -2249,14 +2249,14 @@ const Trips: React.FC = () => {
                 Cancel
               </button>
               <button
-                onClick={() => {
+                onClick={async () => {
                   const vehicle = vehicles.find((v: any) => v.id === selectedVehicleIdForModal);
                   if (!vehicle) {
                     showFeedback("Please select a valid vehicle.", "error");
                     return;
                   }
 
-                  const res = assignResources(selectedTripForAction.id, vehicle.id, selectedTripForAction.driver);
+                  const res = await assignResources(selectedTripForAction.id, vehicle.id, selectedTripForAction.driver);
                   if (res.success) {
                     showFeedback(`Vehicle ${vehicle.id} assigned to Trip ${selectedTripForAction.id} successfully.`, "success");
                     setActiveModal(null);

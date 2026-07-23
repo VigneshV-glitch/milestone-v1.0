@@ -79,7 +79,7 @@ export const KPICards: React.FC = () => {
     },
     { 
       title: "Active Drivers", 
-      value: drivers.filter(d => d.status === "Driving" || d.status === "Active").length.toString(), 
+      value: drivers.filter(d => d.status === "Driving" || d.status === "Loading" || d.status === "Available").length.toString(), 
       trend: "+ 2", 
       trendDesc: "on duty", 
       color: "text-orange-500", 

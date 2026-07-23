@@ -1,51 +1,30 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect } from "react";
 import { useTMSData } from "../../utils/useTMSData";
-import { SearchResult, EntityType } from "./types";
-import { 
-  searchTrips, 
-  searchVehicles, 
-  searchDrivers, 
-  searchCargo, 
-  searchStops, 
-  searchExceptions 
-} from "./searchUtils";
+import { SearchResult } from "./types";
+import { searchService } from "../../services/search.service";
 
 export function useUniversalSearch(query: string, currentTab: string) {
   const { trips, vehicles, drivers } = useTMSData();
   const [results, setResults] = useState<SearchResult[]>([]);
 
-  const searchResults = useMemo(() => {
-    if (query.length < 2) return [];
+  useEffect(() => {
+    if (query.length < 2) {
+      setResults([]);
+      return;
+    }
 
-    const tripResults = searchTrips(trips, query);
-    const vehicleResults = searchVehicles(vehicles, query);
-    const driverResults = searchDrivers(drivers, query);
-    const cargoResults = searchCargo(trips, query);
-    const stopResults = searchStops(trips, query);
-    const exceptionResults = searchExceptions(trips, query);
-
-    const allResults = [
-      ...tripResults,
-      ...vehicleResults,
-      ...driverResults,
-      ...cargoResults,
-      ...stopResults,
-      ...exceptionResults
-    ];
-
-    // Boost results from current tab
-    return allResults.map(res => {
-      let boostedScore = res.score;
-      if (currentTab === "Trips" && (res.type === "Trip" || res.type === "Cargo" || res.type === "Stop")) {
-        boostedScore += 10;
-      } else if (currentTab === "Vehicles" && res.type === "Vehicle") {
-        boostedScore += 10;
-      } else if (currentTab === "Drivers" && res.type === "Driver") {
-        boostedScore += 10;
+    let isMounted = true;
+    searchService.universalSearch(query, currentTab).then((res) => {
+      if (isMounted) {
+        setResults(res);
       }
-      return { ...res, score: boostedScore };
-    }).sort((a, b) => b.score - a.score);
-  }, [query, trips, vehicles, drivers, currentTab]);
+    });
 
-  return searchResults;
+    return () => {
+      isMounted = false;
+    };
+  }, [query, currentTab, trips, vehicles, drivers]);
+
+  return results;
 }
+

@@ -12,6 +12,7 @@ import Settings from './pages/Settings';
 import { initializeTMSDatabase } from './utils/dbInit';
 import { FeedbackOverlay } from './components/layout/FeedbackOverlay';
 import UniversalSearch from './components/search/UniversalSearch';
+import { AuthModal } from './components/auth/AuthModal';
 
 // Pre-initialize databases synchronously if not present to ensure consistent state initializers
 initializeTMSDatabase();
@@ -58,6 +59,8 @@ export default function App() {
       {renderContent()}
       <FeedbackOverlay />
       <UniversalSearch activeTab={activeTab} onTabChange={setActiveTab} />
+      <AuthModal />
     </AppShell>
   );
 }
+

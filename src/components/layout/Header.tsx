@@ -1,10 +1,12 @@
 import React, { useState } from 'react';
-import { Moon, Sun, Search } from 'lucide-react';
+import { Moon, Sun, Search, LogOut, LogIn } from 'lucide-react';
 import { useTheme } from '../ThemeProvider';
 import { QuickActionsMenu } from '../dashboard/QuickActionsMenu';
+import { useAuth } from '../../contexts/AuthContext';
 
 const Header: React.FC = () => {
   const { theme, setTheme } = useTheme();
+  const { user, openAuthModal, signOut } = useAuth();
   const [searchFocused] = useState(false);
 
   return (
@@ -30,15 +32,41 @@ const Header: React.FC = () => {
         </button>
         <QuickActionsMenu />
         {/* User Profile */}
-        <div className="flex items-center space-x-3">
-            <img src="https://picsum.photos/seed/user/40/40" alt="User" className="w-8 h-8 rounded-full" />
-            <div>
-                <div className="text-sm font-semibold text-gray-800 dark:text-gray-200">John Doe</div>
-                <div className="text-[10px] leading-tight text-gray-500 dark:text-gray-400">Admin</div>
+        <div className="flex items-center space-x-3 cursor-pointer group" onClick={user ? undefined : openAuthModal}>
+          <img 
+            src={user?.user_metadata?.avatar || "https://picsum.photos/seed/user/40/40"} 
+            alt="User" 
+            className="w-8 h-8 rounded-full border border-gray-200 dark:border-[#2d2d2d]" 
+          />
+          <div>
+            <div className="text-sm font-semibold text-gray-800 dark:text-gray-200">
+              {user?.user_metadata?.full_name || user?.email || 'John Doe'}
             </div>
+            <div className="text-[10px] leading-tight text-gray-500 dark:text-gray-400">
+              {user ? 'Admin (Supabase)' : 'Guest - Click to Sign In'}
+            </div>
+          </div>
+          {user ? (
+            <button
+              onClick={(e) => { e.stopPropagation(); signOut(); }}
+              title="Sign Out"
+              className="p-1 text-gray-400 hover:text-red-500 transition-colors ml-1"
+            >
+              <LogOut className="w-4 h-4" />
+            </button>
+          ) : (
+            <button
+              onClick={openAuthModal}
+              title="Sign In"
+              className="p-1 text-primary-600 dark:text-primary-400 hover:text-primary-700 transition-colors ml-1"
+            >
+              <LogIn className="w-4 h-4" />
+            </button>
+          )}
         </div>
       </div>
     </header>
   );
 };
 export default Header;
+
