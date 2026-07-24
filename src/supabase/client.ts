@@ -12,7 +12,7 @@ export const isSupabaseConfigured = Boolean(
   !supabaseUrl.includes('placeholder-project') &&
   !supabaseAnonKey.includes('your-supabase-anon-key') &&
   !supabaseAnonKey.includes('placeholder-anon-key') &&
-  supabaseAnonKey.startsWith('eyJ')
+  (supabaseAnonKey.startsWith('eyJ') || supabaseAnonKey.startsWith('sb_') || supabaseAnonKey.length > 15)
 );
 
 export const supabase = createClient(
