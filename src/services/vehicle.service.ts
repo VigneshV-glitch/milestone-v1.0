@@ -54,15 +54,15 @@ export const vehicleService = {
         .order('id', { ascending: true });
 
       if (error) {
-        console.error('Error fetching vehicles from Supabase:', error);
+        console.warn('Supabase fetch notice (vehicles):', error.message || error);
         return JSON.parse(localStorage.getItem('tms_vehicles') || '[]');
       }
 
       const vehicles = data ? data.map(mapRowToVehicle) : [];
       localStorage.setItem('tms_vehicles', JSON.stringify(vehicles));
       return vehicles;
-    } catch (err) {
-      console.error('Error in getVehicles:', err);
+    } catch (err: any) {
+      console.warn('Supabase getVehicles fallback:', err?.message || err);
       return JSON.parse(localStorage.getItem('tms_vehicles') || '[]');
     }
   },

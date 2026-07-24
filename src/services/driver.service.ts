@@ -54,15 +54,15 @@ export const driverService = {
         .order('id', { ascending: true });
 
       if (error) {
-        console.error('Error fetching drivers from Supabase:', error);
+        console.warn('Supabase fetch notice (drivers):', error.message || error);
         return JSON.parse(localStorage.getItem('tms_drivers') || '[]');
       }
 
       const drivers = data ? data.map(mapRowToDriver) : [];
       localStorage.setItem('tms_drivers', JSON.stringify(drivers));
       return drivers;
-    } catch (err) {
-      console.error('Error in getDrivers:', err);
+    } catch (err: any) {
+      console.warn('Supabase getDrivers fallback:', err?.message || err);
       return JSON.parse(localStorage.getItem('tms_drivers') || '[]');
     }
   },

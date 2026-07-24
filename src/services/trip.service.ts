@@ -79,15 +79,15 @@ export const tripService = {
         .order('created_at', { ascending: false });
 
       if (error) {
-        console.error('Error fetching trips from Supabase:', error);
+        console.warn('Supabase fetch notice (trips):', error.message || error);
         return JSON.parse(localStorage.getItem('tms_trips') || '[]');
       }
 
       const trips = data ? data.map(mapRowToTrip) : [];
       localStorage.setItem('tms_trips', JSON.stringify(trips));
       return trips;
-    } catch (err) {
-      console.error('Error in getTrips:', err);
+    } catch (err: any) {
+      console.warn('Supabase getTrips fallback:', err?.message || err);
       return JSON.parse(localStorage.getItem('tms_trips') || '[]');
     }
   },
