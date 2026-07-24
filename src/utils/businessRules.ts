@@ -7,78 +7,37 @@ import { Trip, Vehicle, Driver, ExecutionReason, Severity } from "../types";
 export const TRIP_LIFECYCLE = ["Draft", "Planned", "Scheduled", "Assigned", "Loading", "Dispatched", "In Transit", "Delivered", "Completed"];
 
 /**
- * Deterministically generates a list of cargo items for a stop.
+ * Retrieves the actual cargo items for a stop, or creates a single cargo record from actual step/trip data.
+ * Does not generate fake mock items.
  */
-export const getSpecificGoodsList = (goodsType: string, stopIdx: number, tripId: string, totalSteps: number) => {
-  const seed = (tripId || "").split("").reduce((acc, c) => acc + c.charCodeAt(0), 0) + (stopIdx || 0);
-  const typeKey = (goodsType || "Standard Freight").toLowerCase();
-  
-  let list: { name: string; quantity: string; type: "Pickup" | "Delivery" }[] = [];
-  
-  if (typeKey.includes("electronics")) {
-    list = [
-      { name: "Precision Silicon IC Wafers (3nm)", quantity: `${(seed % 30) + 15} Cases`, type: "Pickup" },
-      { name: "OLED Micro-Display Panels (Ultra-HD)", quantity: `${(seed % 6) + 4} Pallets`, type: "Delivery" },
-      { name: "High-Frequency Transceiver Modules", quantity: `${(seed % 25) + 10} Crates`, type: "Pickup" },
-    ];
-  } else if (typeKey.includes("furniture")) {
-    list = [
-      { name: "Ergonomic Pneumatic Task Chairs", quantity: `${(seed % 40) + 20} Units`, type: "Delivery" },
-      { name: "Polished Oak Conference Desks (Modular)", quantity: `${(seed % 8) + 4} Crates`, type: "Pickup" },
-      { name: "Tempered Glass Partition Panels", quantity: `${(seed % 12) + 6} Cartons`, type: "Delivery" },
-    ];
-  } else if (typeKey.includes("medical") || typeKey.includes("medicine")) {
-    list = [
-      { name: "Sterile Polystyrene Petri Dishes", quantity: `${(seed % 150) + 80} Packs`, type: "Pickup" },
-      { name: "Titanium Surgical Implant Screws", quantity: `${(seed % 60) + 30} Units`, type: "Delivery" },
-      { name: "Disposable Nitrile Protective Gloves", quantity: `${(seed % 12) + 5} Cartons`, type: "Pickup" },
-    ];
-  } else if (typeKey.includes("machinery") || typeKey.includes("machine")) {
-    list = [
-      { name: "Hydraulic Radial Piston Pumps", quantity: `${(seed % 8) + 4} Crates`, type: "Pickup" },
-      { name: "Pneumatic Solenoid Valve Manifolds", quantity: `${(seed % 20) + 10} Units`, type: "Delivery" },
-      { name: "Carbide-Tipped CNC Router Bits", quantity: `${(seed % 100) + 50} Packs`, type: "Delivery" },
-    ];
-  } else if (typeKey.includes("grocery") || typeKey.includes("groceries") || typeKey.includes("food")) {
-    list = [
-      { name: "Organic Cold-Pressed Extra Virgin Olive Oil", quantity: `${(seed % 55) + 20} Cases`, type: "Delivery" },
-      { name: "Gluten-Free Handcut Rolled Oats", quantity: `${(seed % 8) + 4} Pallets`, type: "Pickup" },
-      { name: "Fair-Trade Dark Chocolate Cocoa Nibs", quantity: `${(seed % 12) + 8} Sacks`, type: "Delivery" },
-    ];
-  } else if (typeKey.includes("automotive") || typeKey.includes("auto")) {
-    list = [
-      { name: "Brushless DC Radiator Cooling Fans", quantity: `${(seed % 100) + 40} Units`, type: "Pickup" },
-      { name: "Asbestos-Free Ceramic Brake Pads", quantity: `${(seed % 35) + 15} Boxes`, type: "Delivery" },
-      { name: "Forged Steel CV Axle Shaft Assembly", quantity: `${(seed % 5) + 3} Pallets`, type: "Pickup" },
-    ];
-  } else if (typeKey.includes("textile") || typeKey.includes("textiles")) {
-    list = [
-      { name: "Mercerized Combed Egyptian Cotton Yarn", quantity: `${(seed % 12) + 6} Bales`, type: "Pickup" },
-      { name: "Flame-Retardant Polyester Webbing Reels", quantity: `${(seed % 25) + 10} Rolls`, type: "Delivery" },
-      { name: "Waterproof Polyurethane-Coated Ripstop Nylon", quantity: `${(seed % 8) + 3} Pallets`, type: "Delivery" },
-    ];
-  } else {
-    list = [
-      { name: "Industrial Grade Galvanized Fasteners", quantity: `${(seed % 40) + 15} Cartons`, type: "Pickup" },
-      { name: "Heavy Duty Polyethylene Stretch Wrap Reels", quantity: `${(seed % 18) + 6} Rolls`, type: "Delivery" },
-      { name: "Reinforced Corrugated Shipping Boxes", quantity: `${(seed % 12) + 5} Pallets`, type: "Pickup" },
-    ];
+export const getGoodsForStep = (step: any, stopIdx: number, trip?: any, totalSteps?: number) => {
+  if (!step) {
+    const name = trip?.loadType || "General Cargo";
+    const quantity = "1 Load";
+    const type: "Pickup" | "Delivery" = stopIdx === 0 ? "Pickup" : "Delivery";
+    return [{ name, quantity, type }];
   }
 
-  return list.map((item, idx) => {
-    let typeOverride: "Pickup" | "Delivery" = item.type;
-    if (stopIdx === 0) {
-      typeOverride = "Pickup";
-    } else if (stopIdx === totalSteps - 1) {
-      typeOverride = "Delivery";
-    } else {
-      typeOverride = idx % 2 === 0 ? "Delivery" : "Pickup";
-    }
-    return {
-      ...item,
-      type: typeOverride
-    };
-  });
+  // 1. Check for real cargo items array stored on the step from DB
+  const rawItems = step.cargoItems || step.cargo_items || step.goods || step.items;
+  if (Array.isArray(rawItems) && rawItems.length > 0) {
+    return rawItems.map((item: any, idx: number) => ({
+      name: item.name || item.cargoCommodity || item.commodity || item.description || step.goodsType || trip?.loadType || "General Cargo",
+      quantity: item.quantity || item.plannedQuantity || step.quantity || "1 Load",
+      type: (item.type || step.type || (stopIdx === 0 ? "Pickup" : "Delivery")) as "Pickup" | "Delivery"
+    }));
+  }
+
+  // 2. Return real commodity name & quantity directly from the step or trip DB record
+  const name = step.goodsType || step.cargoType || step.commodity || trip?.loadType || "General Cargo";
+  const quantity = step.quantity || "1 Load";
+  const type: "Pickup" | "Delivery" = step.type === "Pickup" ? "Pickup" : step.type === "Delivery" ? "Delivery" : (stopIdx === 0 ? "Pickup" : "Delivery");
+
+  return [{ name, quantity, type }];
+};
+
+export const getSpecificGoodsList = (goodsType: string, stopIdx: number, tripId: string, totalSteps: number, step?: any, trip?: any) => {
+  return getGoodsForStep(step, stopIdx, trip, totalSteps);
 };
 
 /**

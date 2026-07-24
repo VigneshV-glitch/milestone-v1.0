@@ -9,6 +9,7 @@ import {
   TRIP_LIFECYCLE, 
   logActivity,
   calculateSeverity,
+  getGoodsForStep,
   getSpecificGoodsList,
   parsePlannedQuantity
 } from "../utils/businessRules";
@@ -911,10 +912,10 @@ const Trips: React.FC = () => {
             if (step.cargoItems?.[itemIdx]) {
               plannedVal = parsePlannedQuantity(step.cargoItems[itemIdx].plannedQuantity || "").value;
             } else {
-              const goodsList = getSpecificGoodsList(
-                step.goodsType || "",
+              const goodsList = getGoodsForStep(
+                step,
                 stopIdx,
-                trip.id,
+                trip,
                 trip.routeProgress.steps.length
               );
               const goodsItem = goodsList[itemIdx];
@@ -1633,10 +1634,10 @@ const Trips: React.FC = () => {
                                                 </tr>
                                               </thead>
                                               <tbody className="divide-y divide-gray-100 dark:divide-[#2d2d2d] bg-white dark:bg-[#121212]">
-                                                {getSpecificGoodsList(
-                                                  activeStep.goodsType || trip.loadType || "General Cargo",
+                                                {getGoodsForStep(
+                                                  activeStep,
                                                   activeStopIdx,
-                                                  trip.id,
+                                                  trip,
                                                   routeSteps.length
                                                 ).map((goodsItem, itemIdx) => {
                                                   const execKey = `${activeStopIdx}_${itemIdx}`;
