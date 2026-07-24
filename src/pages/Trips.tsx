@@ -1346,7 +1346,7 @@ const Trips: React.FC = () => {
                               setSelectedStopIdx(null);
                             } else {
                               setExpandedTripId(trip.id);
-                              setSelectedStopIdx(null);
+                              setSelectedStopIdx(0);
                             }
                           }}
                         >
@@ -1383,19 +1383,44 @@ const Trips: React.FC = () => {
                         </span>
                       </td>
                       <td className="px-6 py-2 whitespace-nowrap">
-                        <div className="flex items-center gap-2.5">
-                          <div className="flex flex-col">
-                            <span className="text-xs text-gray-900 dark:text-gray-100">
-                              {trip.origin}
-                            </span>
-                            <span className="text-xs text-gray-600 dark:text-gray-200">
-                              → {trip.destination}
-                            </span>
-                          </div>
-                          <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-bold bg-primary-50 text-primary-700 dark:bg-primary-950/50 dark:text-primary-300 border border-primary-100/70 dark:border-primary-800/40 shadow-2xs">
-                            ({trip.routeProgress.completedCount}/{trip.routeProgress.steps.length})
-                          </span>
-                        </div>
+                        {(() => {
+                          const routeSteps = (trip.routeProgress?.steps && trip.routeProgress.steps.length > 0)
+                            ? trip.routeProgress.steps
+                            : [
+                                {
+                                  location: trip.origin || "Origin Facility",
+                                  type: "Pickup",
+                                  time: trip.date || "Scheduled",
+                                  status: trip.status === "Scheduled" ? "pending" : "completed",
+                                  goodsType: trip.loadType || "General Cargo",
+                                  quantity: "50 Pallets"
+                                },
+                                {
+                                  location: trip.destination || "Destination Facility",
+                                  type: "Delivery",
+                                  time: trip.expectedDelivery || trip.eta || "Scheduled",
+                                  status: trip.status === "Completed" ? "completed" : trip.status === "In Transit" ? "current" : "pending",
+                                  goodsType: trip.loadType || "General Cargo",
+                                  quantity: "50 Pallets"
+                                }
+                              ];
+                          const completedCount = trip.routeProgress?.completedCount ?? routeSteps.filter((s: any) => s.status === "completed").length;
+                          return (
+                            <div className="flex items-center gap-2.5">
+                              <div className="flex flex-col">
+                                <span className="text-xs text-gray-900 dark:text-gray-100">
+                                  {trip.origin}
+                                </span>
+                                <span className="text-xs text-gray-600 dark:text-gray-200">
+                                  → {trip.destination}
+                                </span>
+                              </div>
+                              <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-bold bg-primary-50 text-primary-700 dark:bg-primary-950/50 dark:text-primary-300 border border-primary-100/70 dark:border-primary-800/40 shadow-2xs">
+                                ({completedCount}/{routeSteps.length})
+                              </span>
+                            </div>
+                          );
+                        })()}
                       </td>
                       <td className="px-6 py-2 whitespace-nowrap">
                         <span
@@ -1407,7 +1432,15 @@ const Trips: React.FC = () => {
                       <td className="px-6 py-2 whitespace-nowrap text-right text-sm font-medium">
                         <div className="flex items-center justify-end gap-0.5" onClick={(e) => e.stopPropagation()}>
                           <button
-                            onClick={() => setExpandedTripId(expandedTripId === trip.id ? null : trip.id)}
+                            onClick={() => {
+                              if (expandedTripId === trip.id) {
+                                setExpandedTripId(null);
+                                setSelectedStopIdx(null);
+                              } else {
+                                setExpandedTripId(trip.id);
+                                setSelectedStopIdx(0);
+                              }
+                            }}
                             className="text-gray-400 hover:text-primary-600 dark:hover:text-primary-400 transition-colors p-1.5 rounded hover:bg-gray-100 dark:hover:bg-[#2a2a2a] cursor-pointer"
                             title="View Trip Details"
                           >
@@ -1445,299 +1478,331 @@ const Trips: React.FC = () => {
                           className="p-0 border-b border-gray-200 dark:border-[#2d2d2d]"
                         >
                           <div className="py-2 px-5 sm:px-6 flex flex-col gap-6 items-stretch w-full">
-                            {/* Horizontal Timeline Stepper container with horizontal scroll for responsiveness */}
-                            <div className="relative min-h-[140px] w-[1247px] max-w-full pt-1 pb-1 pl-0 pr-2.5 overflow-x-auto select-none no-scrollbar">
-                              <div className="min-w-[760px] relative px-4">
-                                <div className="flex items-start justify-start w-full relative z-10">
-                                  {trip.routeProgress.steps.map((step: any, index: number) => {
-                                    const isDelayedStep =
-                                      step.status === "current" &&
-                                      trip.status === "Delayed";
-                                    const isSelected = selectedStopIdx === index;
+                            {(() => {
+                              const routeSteps = (trip.routeProgress?.steps && trip.routeProgress.steps.length > 0)
+                                ? trip.routeProgress.steps
+                                : [
+                                    {
+                                      location: trip.origin || "Origin Facility",
+                                      type: "Pickup",
+                                      time: trip.date || "Scheduled",
+                                      status: trip.status === "Scheduled" ? "pending" : "completed",
+                                      goodsType: trip.loadType || "General Cargo",
+                                      quantity: "50 Pallets"
+                                    },
+                                    {
+                                      location: trip.destination || "Destination Facility",
+                                      type: "Delivery",
+                                      time: trip.expectedDelivery || trip.eta || "Scheduled",
+                                      status: trip.status === "Completed" ? "completed" : trip.status === "In Transit" ? "current" : "pending",
+                                      goodsType: trip.loadType || "General Cargo",
+                                      quantity: "50 Pallets"
+                                    }
+                                  ];
 
-                                    return (
-                                      <React.Fragment key={index}>
-                                        {/* Step Column */}
-                                        <div
-                                          onClick={() => setSelectedStopIdx(isSelected ? null : index)}
-                                          className={`flex flex-col items-center text-center cursor-pointer select-none transition-all duration-300 rounded-2xl p-3 pt-4 max-w-[110px] flex-1 ${
-                                            isSelected
-                                              ? "bg-primary-50/15 dark:bg-primary-950/10 border border-primary-100 dark:border-primary-500/25 shadow-xs scale-[1.01]"
-                                              : "border border-transparent hover:bg-gray-100/60 dark:hover:bg-gray-900/20"
-                                          }`}
-                                        >
-                                          {/* Circle Container */}
-                                          <div className="h-[28px] flex items-center justify-center relative mb-4">
-                                            {step.status === "completed" ? (
-                                              <div className="w-[28px] h-[28px] rounded-full bg-[#10b981] flex items-center justify-center text-white shadow-sm transition-all duration-300 hover:scale-105">
-                                                <Check className="w-[17px] h-[17px] stroke-[3.5]" />
-                                              </div>
-                                            ) : step.status === "current" ? (
-                                              <div className={`w-[28px] h-[28px] rounded-full border-[3px] bg-white dark:bg-[#121212] flex items-center justify-center shadow-md transition-all duration-300 hover:scale-105 ${
-                                                isDelayedStep ? "border-red-500" : "border-primary-600"
-                                              }`}>
-                                                <div className={`w-4 h-4 rounded-full transition-all duration-300 animate-pulse ${
-                                                  isDelayedStep ? "bg-red-500" : "bg-primary-600"
-                                                }`} />
-                                              </div>
-                                            ) : (
-                                              <div className="w-[28px] h-[28px] rounded-full bg-primary-100 dark:bg-[#1e293b] flex items-center justify-center transition-all duration-300 shadow-2xs hover:scale-105" />
-                                            )}
-                                          </div>
-                                          {/* Subtext labels exactly styled like the design */}
-                                          <span className={`text-[12px] font-medium text-gray-900 dark:text-white mt-1 truncate max-w-[130px] ${
-                                            isSelected ? "text-primary-700 dark:text-primary-400 font-semibold" : ""
-                                          }`}>
-                                            {step.location.split(",")[0]}
-                                          </span>
-                                          
-                                          <span className={`text-xs font-medium mt-1 ${
-                                            step.status === "completed"
-                                              ? "text-[#10b981]"
-                                              : step.status === "current"
-                                                ? isDelayedStep
-                                                  ? "text-red-500 dark:text-red-400"
-                                                  : "text-primary-600 dark:text-primary-400"
-                                                : "text-gray-400 dark:text-gray-500"
-                                          }`}>
-                                            {step.status === "completed"
-                                              ? "Completed"
-                                              : step.status === "current"
-                                                ? isDelayedStep
-                                                  ? "Delayed"
-                                                  : "In Progress"
-                                                : "Pending"}
-                                          </span>
-                                          <span className="text-xs text-gray-600 dark:text-gray-200 mt-1 font-medium">
-                                            {step.status === "pending" ? "Scheduled" : step.time}
-                                          </span>
-                                        </div>
+                              const activeStopIdx = (selectedStopIdx !== null && routeSteps[selectedStopIdx])
+                                ? selectedStopIdx
+                                : 0;
 
-                                        {/* Connecting Line Segment between adjacent steps */}
-                                        {index < trip.routeProgress.steps.length - 1 && (
-                                          <div className="flex-none w-10 h-[28px] mt-4 flex items-center justify-center">
-                                            {step.status === "completed" ? (
-                                              <div className="w-full h-[4px] bg-[#10b981] rounded-full transition-all duration-300" />
-                                            ) : step.status === "current" ? (
-                                              <div className="w-full h-[4px] bg-primary-100 dark:bg-primary-950/40 rounded-full overflow-hidden relative transition-all duration-300">
-                                                <div className={`absolute top-0 bottom-0 left-0 w-1/2 rounded-full ${
-                                                  isDelayedStep ? "bg-red-500" : "bg-primary-600"
-                                                }`} />
-                                              </div>
-                                            ) : (
-                                              <div className="w-full h-[4px] bg-[#bfdbfe] dark:bg-blue-950/40 rounded-full transition-all duration-300" />
-                                            )}
-                                          </div>
-                                        )}
-                                      </React.Fragment>
-                                    );
-                                  })}
-                                </div>
-                              </div>
-                            </div>
+                              const activeStep = routeSteps[activeStopIdx];
 
-                            {/* Level 2 Expandable Goods Details Card */}
-                            {selectedStopIdx !== null && trip.routeProgress.steps[selectedStopIdx] ? (
-                              <div className="flex-1 w-full bg-transparent p-0 animate-fade-in">
-                                <div className="flex items-center gap-2 text-xs font-bold text-gray-600 dark:text-gray-200 tracking-wider uppercase mb-3.5">
-                                  <Package className="w-4 h-4 text-primary-500" />
-                                  <span>Cargo &amp; Goods Details &mdash; {trip.routeProgress.steps[selectedStopIdx].location}</span>
-                                </div>
-                                {trip.routeProgress.steps[selectedStopIdx].type === "Transit" ? (
-                                  <div className="p-8 text-center border border-dashed border-gray-200 dark:border-[#2d2d2d] rounded-2xl bg-gray-50/30 dark:bg-gray-900/10 max-w-xl mx-auto my-4 flex flex-col items-center justify-center">
-                                    <div className="w-12 h-12 rounded-full bg-blue-50 dark:bg-blue-950/20 text-blue-500 flex items-center justify-center mb-3">
-                                      <MapPin className="w-6 h-6" />
-                                    </div>
-                                    <h4 className="text-[14px] font-bold text-gray-800 dark:text-white">Transit Waypoint Checkpoint</h4>
-                                    <p className="text-[12px] text-gray-600 dark:text-gray-200 mt-1.5 leading-relaxed">
-                                      This location is an intermediate transit waypoint for route monitoring, telemetry logging, and scheduling checks. No active cargo items are scheduled for pickup or delivery at this step.
-                                    </p>
-                                  </div>
-                                ) : (
-                                  <div className="overflow-x-auto border border-gray-200 dark:border-[#2d2d2d] rounded-xl bg-gray-50/20 dark:bg-[#0e0e0e]/20">
-                                    <table className="w-full min-w-[900px] divide-y divide-gray-200 dark:divide-[#2d2d2d] text-left text-xs">
-                                      <thead className="bg-gray-50 dark:bg-[#1a1a1a] text-gray-600 dark:text-gray-200 font-bold uppercase tracking-wider text-[10px]">
-                                        <tr>
-                                          <th className="px-5 py-2.5">Type</th>
-                                          <th className="px-5 py-2.5">Location</th>
-                                          <th className="px-5 py-2.5">Cargo Commodity</th>
-                                          <th className="px-5 py-2.5">Planned Qty</th>
-                                          <th className="px-5 py-2.5">Execution Remarks</th>
-                                          <th className="px-5 py-2.5">Severity</th>
-                                          <th className="px-5 py-2.5">Time/ETA</th>
-                                          <th className="px-5 py-2.5">Status</th>
-                                          <th className="px-5 py-2.5 text-right">Actions</th>
-                                        </tr>
-                                      </thead>
-                                      <tbody className="divide-y divide-gray-100 dark:divide-[#2d2d2d] bg-white dark:bg-[#121212]">
-                                        {getSpecificGoodsList(
-                                          trip.routeProgress.steps[selectedStopIdx].goodsType,
-                                          selectedStopIdx,
-                                          trip.id,
-                                          trip.routeProgress.steps.length
-                                        ).map((goodsItem, itemIdx) => {
-                                          const execKey = `${selectedStopIdx}_${itemIdx}`;
-                                          const execution = trip.executions?.[execKey];
-                                          
-                                          let executionRemarksText = "—";
-                                          let hasPartialWarning = false;
-
-                                          const { value: plannedVal, unit } = parsePlannedQuantity(goodsItem.quantity);
-
-
-                                          if (execution) {
-                                            const actualVal = execution.actualQuantity;
-                                            const reason = execution.reason;
-                                            const diff = plannedVal - actualVal;
-                                            
-                                            if (actualVal < plannedVal) {
-                                              hasPartialWarning = true;
-                                            }
-
-                                            if (diff === 0) {
-                                              executionRemarksText = "Completed without discrepancy";
-                                            } else if (diff < 0) {
-                                              const overCount = Math.abs(diff);
-                                              const actionPast = goodsItem.type === "Pickup" ? "Picked" : "Delivered";
-                                              const unitLowercase = unit.toLowerCase();
-                                              executionRemarksText = `${actionPast} ${actualVal} / ${plannedVal} ${unitLowercase} • Over shipped by ${overCount}`;
-                                            } else {
-                                              const actionPast = goodsItem.type === "Pickup" ? "Picked" : "Delivered";
-                                              const unitLowercase = unit.toLowerCase();
-                                              
-                                              if (reason === "Damaged Goods") {
-                                                executionRemarksText = `${actionPast} ${actualVal} / ${plannedVal} ${unitLowercase} • ${diff} damaged`;
-                                              } else if (reason === "Customer Rejected") {
-                                                executionRemarksText = `${actionPast} ${actualVal} / ${plannedVal} ${unitLowercase} • Customer rejected remaining`;
-                                              } else {
-                                                executionRemarksText = `${actionPast} ${actualVal} / ${plannedVal} ${unitLowercase} • ${diff} ${reason.toLowerCase()}`;
-                                              }
-                                            }
-                                          }
-
-                                          const severity = execution 
-                                            ? calculateSeverity(execution.reason as any, plannedVal, execution.actualQuantity) 
-                                            : null;
-
-                                          const getSeverityBadge = (sev: string | null) => {
-                                            if (!sev) return <span className="text-gray-400 dark:text-gray-600">—</span>;
-                                            
-                                            let dotColor = "";
-                                            let bgColor = "";
-
-                                            switch (sev) {
-                                              case "Critical":
-                                                dotColor = "bg-red-500";
-                                                bgColor = "bg-red-50 text-red-700 border-red-100 dark:bg-red-950/20 dark:text-red-400 dark:border-red-900/30";
-                                                break;
-                                              case "High":
-                                                dotColor = "bg-orange-500";
-                                                bgColor = "bg-orange-50 text-orange-700 border-orange-100 dark:bg-orange-950/20 dark:text-orange-400 dark:border-orange-900/30";
-                                                break;
-                                              case "Medium":
-                                                dotColor = "bg-yellow-500";
-                                                bgColor = "bg-yellow-50 text-yellow-700 border-yellow-100 dark:bg-yellow-950/20 dark:text-yellow-400 dark:border-yellow-900/30";
-                                                break;
-                                              case "Low":
-                                                dotColor = "bg-blue-500";
-                                                bgColor = "bg-blue-50 text-blue-700 border-blue-100 dark:bg-blue-950/20 dark:text-blue-400 dark:border-blue-900/30";
-                                                break;
-                                              case "None":
-                                                dotColor = "bg-green-500";
-                                                bgColor = "bg-green-50 text-green-700 border-green-100 dark:bg-green-950/20 dark:text-green-400 dark:border-green-900/30";
-                                                break;
-                                              default:
-                                                return <span className="text-gray-400 dark:text-gray-600">—</span>;
-                                            }
+                              return (
+                                <>
+                                  {/* Horizontal Timeline Stepper container with horizontal scroll for responsiveness */}
+                                  <div className="relative min-h-[140px] w-[1247px] max-w-full pt-1 pb-1 pl-0 pr-2.5 overflow-x-auto select-none no-scrollbar">
+                                    <div className="min-w-[760px] relative px-4">
+                                      <div className="flex items-start justify-start w-full relative z-10">
+                                          {routeSteps.map((step: any, index: number) => {
+                                            const isDelayedStep =
+                                              step.status === "current" &&
+                                              trip.status === "Delayed";
+                                            const isSelected = activeStopIdx === index;
 
                                             return (
-                                              <div className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full border text-[10px] font-bold uppercase tracking-wider ${bgColor}`}>
-                                                <span className={`w-1.5 h-1.5 rounded-full ${dotColor}`}></span>
-                                                {sev}
-                                              </div>
-                                            );
-                                          };
-
-                                          return (
-                                            <tr key={itemIdx} className="hover:bg-gray-50/50 dark:hover:bg-gray-900/30 transition-colors">
-                                              <td className="px-5 py-3">
-                                                <span className={`inline-flex px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase border ${
-                                                  goodsItem.type === "Pickup"
-                                                    ? "bg-blue-50/70 text-blue-700 border-blue-100 dark:bg-blue-950/20 dark:text-blue-400 dark:border-blue-900/30"
-                                                    : "bg-purple-50/70 text-purple-700 border-purple-100 dark:bg-purple-950/20 dark:text-purple-400 dark:border-purple-900/30"
-                                                }`}>
-                                                  {goodsItem.type}
-                                                </span>
-                                              </td>
-                                              <td className="px-5 py-3 font-medium text-gray-900 dark:text-gray-200">
-                                                {trip.routeProgress.steps[selectedStopIdx].location}
-                                              </td>
-                                              <td className="px-5 py-3 text-gray-750 dark:text-gray-300 font-semibold">
-                                                {goodsItem.name}
-                                              </td>
-                                              <td className="px-5 py-3">
-                                                <span className={`inline-flex px-2 py-0.5 rounded text-[11px] font-bold ${
-                                                  goodsItem.type === "Pickup"
-                                                    ? "bg-blue-50/30 text-blue-600 border border-blue-100 dark:bg-blue-950/10 dark:text-blue-400 dark:border-blue-900/20"
-                                                    : "bg-purple-50/30 text-purple-600 border border-purple-100 dark:bg-purple-950/10 dark:text-purple-400 dark:border-purple-900/20"
-                                                }`}>
-                                                  {goodsItem.quantity}
-                                                </span>
-                                              </td>
-                                              <td className="px-5 py-3 text-gray-700 dark:text-gray-300 font-medium">
-                                                {executionRemarksText}
-                                              </td>
-                                              <td className="px-5 py-3">
-                                                {getSeverityBadge(severity)}
-                                              </td>
-                                              <td className="px-5 py-3 text-gray-550 dark:text-gray-450">
-                                                {trip.routeProgress.steps[selectedStopIdx].time}
-                                              </td>
-                                              <td className="px-5 py-3">
-                                                <span className={`inline-flex px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider border ${
-                                                  trip.routeProgress.steps[selectedStopIdx].status === "completed"
-                                                    ? "bg-green-50 text-green-700 border-green-100 dark:bg-green-950/20 dark:text-green-400 dark:border-green-900/20"
-                                                    : trip.routeProgress.steps[selectedStopIdx].status === "current"
-                                                      ? "bg-primary-50 text-primary-700 border-primary-100 dark:bg-primary-950/20 dark:text-primary-400 dark:border-primary-900/20 font-extrabold animate-pulse"
-                                                      : "bg-gray-50 text-gray-400 border-gray-100 dark:bg-[#1b1b1b] dark:text-gray-500"
-                                                }`}>
-                                                  {trip.routeProgress.steps[selectedStopIdx].status === "completed" 
-                                                    ? "Completed" 
-                                                    : trip.routeProgress.steps[selectedStopIdx].status === "current" 
-                                                      ? "Active Current" 
-                                                      : "Pending"}
-                                                  {hasPartialWarning && " ⚠ Partial"}
-                                                </span>
-                                              </td>
-                                              <td className="px-5 py-3 text-right">
-                                                <button
-                                                  onClick={() => {
-                                                    setSelectedCargoItem({
-                                                      goodsItem,
-                                                      itemIdx,
-                                                      stopIdx: selectedStopIdx,
-                                                      tripId: trip.id,
-                                                      location: trip.routeProgress.steps[selectedStopIdx].location
-                                                    });
-                                                    setActualQuantity(execution ? execution.actualQuantity : plannedVal);
-                                                    setExecutionReason(execution ? execution.reason : "No Discrepancy");
-                                                    setExecutionRemarksState(execution ? execution.remarks : "");
-                                                    setActiveModal("execution-details");
-                                                  }}
-                                                  className="text-primary-700 hover:text-primary-800 dark:text-primary-400 dark:hover:text-primary-300 font-bold hover:underline cursor-pointer"
+                                              <React.Fragment key={index}>
+                                                {/* Step Column */}
+                                                <div
+                                                  onClick={() => setSelectedStopIdx(index)}
+                                                  className={`flex flex-col items-center text-center cursor-pointer select-none transition-all duration-300 rounded-2xl p-3 pt-4 max-w-[110px] flex-1 ${
+                                                    isSelected
+                                                      ? "bg-primary-50/15 dark:bg-primary-950/10 border border-primary-100 dark:border-primary-500/25 shadow-xs scale-[1.01]"
+                                                      : "border border-transparent hover:bg-gray-100/60 dark:hover:bg-gray-900/20"
+                                                  }`}
                                                 >
-                                                  {execution ? "Edit" : "Add"}
-                                                </button>
-                                              </td>
-                                            </tr>
-                                          );
-                                        })}
-                                      </tbody>
-                                    </table>
-                                  </div>
-                                )}
-                              </div>
-                            ) : null}
+                                                  {/* Circle Container */}
+                                                  <div className="h-[28px] flex items-center justify-center relative mb-4">
+                                                    {step.status === "completed" ? (
+                                                      <div className="w-[28px] h-[28px] rounded-full bg-[#10b981] flex items-center justify-center text-white shadow-sm transition-all duration-300 hover:scale-105">
+                                                        <Check className="w-[17px] h-[17px] stroke-[3.5]" />
+                                                      </div>
+                                                    ) : step.status === "current" ? (
+                                                      <div className={`w-[28px] h-[28px] rounded-full border-[3px] bg-white dark:bg-[#121212] flex items-center justify-center shadow-md transition-all duration-300 hover:scale-105 ${
+                                                        isDelayedStep ? "border-red-500" : "border-primary-600"
+                                                      }`}>
+                                                        <div className={`w-4 h-4 rounded-full transition-all duration-300 animate-pulse ${
+                                                          isDelayedStep ? "bg-red-500" : "bg-primary-600"
+                                                        }`} />
+                                                      </div>
+                                                    ) : (
+                                                      <div className="w-[28px] h-[28px] rounded-full bg-primary-100 dark:bg-[#1e293b] flex items-center justify-center transition-all duration-300 shadow-2xs hover:scale-105" />
+                                                    )}
+                                                  </div>
+                                                  {/* Subtext labels exactly styled like the design */}
+                                                  <span className={`text-[12px] font-medium text-gray-900 dark:text-white mt-1 truncate max-w-[130px] ${
+                                                    isSelected ? "text-primary-700 dark:text-primary-400 font-semibold" : ""
+                                                  }`}>
+                                                    {step.location ? step.location.split(",")[0] : `Stop ${index + 1}`}
+                                                  </span>
+                                                  
+                                                  <span className={`text-xs font-medium mt-1 ${
+                                                    step.status === "completed"
+                                                      ? "text-[#10b981]"
+                                                      : step.status === "current"
+                                                        ? isDelayedStep
+                                                          ? "text-red-500 dark:text-red-400"
+                                                          : "text-primary-600 dark:text-primary-400"
+                                                        : "text-gray-400 dark:text-gray-500"
+                                                  }`}>
+                                                    {step.status === "completed"
+                                                      ? "Completed"
+                                                      : step.status === "current"
+                                                        ? isDelayedStep
+                                                          ? "Delayed"
+                                                          : "In Progress"
+                                                        : "Pending"}
+                                                  </span>
+                                                  <span className="text-xs text-gray-600 dark:text-gray-200 mt-1 font-medium">
+                                                    {step.status === "pending" ? "Scheduled" : step.time}
+                                                  </span>
+                                                </div>
+
+                                                {/* Connecting Line Segment between adjacent steps */}
+                                                {index < routeSteps.length - 1 && (
+                                                  <div className="flex-none w-10 h-[28px] mt-4 flex items-center justify-center">
+                                                    {step.status === "completed" ? (
+                                                      <div className="w-full h-[4px] bg-[#10b981] rounded-full transition-all duration-300" />
+                                                    ) : step.status === "current" ? (
+                                                      <div className="w-full h-[4px] bg-primary-100 dark:bg-primary-950/40 rounded-full overflow-hidden relative transition-all duration-300">
+                                                        <div className={`absolute top-0 bottom-0 left-0 w-1/2 rounded-full ${
+                                                          isDelayedStep ? "bg-red-500" : "bg-primary-600"
+                                                        }`} />
+                                                      </div>
+                                                    ) : (
+                                                      <div className="w-full h-[4px] bg-[#bfdbfe] dark:bg-blue-950/40 rounded-full transition-all duration-300" />
+                                                    )}
+                                                  </div>
+                                                )}
+                                              </React.Fragment>
+                                            );
+                                          })}
+                                        </div>
+                                      </div>
+                                    </div>
+
+                                    {/* Level 2 Expandable Goods Details Card */}
+                                    {activeStep ? (
+                                      <div className="flex-1 w-full bg-transparent p-0 animate-fade-in">
+                                        <div className="flex items-center gap-2 text-xs font-bold text-gray-600 dark:text-gray-200 tracking-wider uppercase mb-3.5">
+                                          <Package className="w-4 h-4 text-primary-500" />
+                                          <span>Cargo &amp; Goods Details &mdash; {activeStep.location}</span>
+                                        </div>
+                                        {activeStep.type === "Transit" ? (
+                                          <div className="p-8 text-center border border-dashed border-gray-200 dark:border-[#2d2d2d] rounded-2xl bg-gray-50/30 dark:bg-gray-900/10 max-w-xl mx-auto my-4 flex flex-col items-center justify-center">
+                                            <div className="w-12 h-12 rounded-full bg-blue-50 dark:bg-blue-950/20 text-blue-500 flex items-center justify-center mb-3">
+                                              <MapPin className="w-6 h-6" />
+                                            </div>
+                                            <h4 className="text-[14px] font-bold text-gray-800 dark:text-white">Transit Waypoint Checkpoint</h4>
+                                            <p className="text-[12px] text-gray-600 dark:text-gray-200 mt-1.5 leading-relaxed">
+                                              This location is an intermediate transit waypoint for route monitoring, telemetry logging, and scheduling checks. No active cargo items are scheduled for pickup or delivery at this step.
+                                            </p>
+                                          </div>
+                                        ) : (
+                                          <div className="overflow-x-auto border border-gray-200 dark:border-[#2d2d2d] rounded-xl bg-gray-50/20 dark:bg-[#0e0e0e]/20">
+                                            <table className="w-full min-w-[900px] divide-y divide-gray-200 dark:divide-[#2d2d2d] text-left text-xs">
+                                              <thead className="bg-gray-50 dark:bg-[#1a1a1a] text-gray-600 dark:text-gray-200 font-bold uppercase tracking-wider text-[10px]">
+                                                <tr>
+                                                  <th className="px-5 py-2.5">Type</th>
+                                                  <th className="px-5 py-2.5">Location</th>
+                                                  <th className="px-5 py-2.5">Cargo Commodity</th>
+                                                  <th className="px-5 py-2.5">Planned Qty</th>
+                                                  <th className="px-5 py-2.5">Execution Remarks</th>
+                                                  <th className="px-5 py-2.5">Severity</th>
+                                                  <th className="px-5 py-2.5">Time/ETA</th>
+                                                  <th className="px-5 py-2.5">Status</th>
+                                                  <th className="px-5 py-2.5 text-right">Actions</th>
+                                                </tr>
+                                              </thead>
+                                              <tbody className="divide-y divide-gray-100 dark:divide-[#2d2d2d] bg-white dark:bg-[#121212]">
+                                                {getSpecificGoodsList(
+                                                  activeStep.goodsType || trip.loadType || "General Cargo",
+                                                  activeStopIdx,
+                                                  trip.id,
+                                                  routeSteps.length
+                                                ).map((goodsItem, itemIdx) => {
+                                                  const execKey = `${activeStopIdx}_${itemIdx}`;
+                                                  const execution = trip.executions?.[execKey];
+                                                  
+                                                  let executionRemarksText = "—";
+                                                  let hasPartialWarning = false;
+
+                                                  const { value: plannedVal, unit } = parsePlannedQuantity(goodsItem.quantity);
+
+                                                  if (execution) {
+                                                    const actualVal = execution.actualQuantity;
+                                                    const reason = execution.reason;
+                                                    const diff = plannedVal - actualVal;
+                                                    
+                                                    if (actualVal < plannedVal) {
+                                                      hasPartialWarning = true;
+                                                    }
+
+                                                    if (diff === 0) {
+                                                      executionRemarksText = "Completed without discrepancy";
+                                                    } else if (diff < 0) {
+                                                      const overCount = Math.abs(diff);
+                                                      const actionPast = goodsItem.type === "Pickup" ? "Picked" : "Delivered";
+                                                      const unitLowercase = unit.toLowerCase();
+                                                      executionRemarksText = `${actionPast} ${actualVal} / ${plannedVal} ${unitLowercase} • Over shipped by ${overCount}`;
+                                                    } else {
+                                                      const actionPast = goodsItem.type === "Pickup" ? "Picked" : "Delivered";
+                                                      const unitLowercase = unit.toLowerCase();
+                                                      
+                                                      if (reason === "Damaged Goods") {
+                                                        executionRemarksText = `${actionPast} ${actualVal} / ${plannedVal} ${unitLowercase} • ${diff} damaged`;
+                                                      } else if (reason === "Customer Rejected") {
+                                                        executionRemarksText = `${actionPast} ${actualVal} / ${plannedVal} ${unitLowercase} • Customer rejected remaining`;
+                                                      } else {
+                                                        executionRemarksText = `${actionPast} ${actualVal} / ${plannedVal} ${unitLowercase} • ${diff} ${reason.toLowerCase()}`;
+                                                      }
+                                                    }
+                                                  }
+
+                                                  const severity = execution 
+                                                    ? calculateSeverity(execution.reason as any, plannedVal, execution.actualQuantity) 
+                                                    : null;
+
+                                                  const getSeverityBadge = (sev: string | null) => {
+                                                    if (!sev) return <span className="text-gray-400 dark:text-gray-600">—</span>;
+                                                    
+                                                    let dotColor = "";
+                                                    let bgColor = "";
+
+                                                    switch (sev) {
+                                                      case "Critical":
+                                                        dotColor = "bg-red-500";
+                                                        bgColor = "bg-red-50 text-red-700 border-red-100 dark:bg-red-950/20 dark:text-red-400 dark:border-red-900/30";
+                                                        break;
+                                                      case "High":
+                                                        dotColor = "bg-orange-500";
+                                                        bgColor = "bg-orange-50 text-orange-700 border-orange-100 dark:bg-orange-950/20 dark:text-orange-400 dark:border-orange-900/30";
+                                                        break;
+                                                      case "Medium":
+                                                        dotColor = "bg-yellow-500";
+                                                        bgColor = "bg-yellow-50 text-yellow-700 border-yellow-100 dark:bg-yellow-950/20 dark:text-yellow-400 dark:border-yellow-900/30";
+                                                        break;
+                                                      case "Low":
+                                                        dotColor = "bg-blue-500";
+                                                        bgColor = "bg-blue-50 text-blue-700 border-blue-100 dark:bg-blue-950/20 dark:text-blue-400 dark:border-blue-900/30";
+                                                        break;
+                                                      case "None":
+                                                        dotColor = "bg-green-500";
+                                                        bgColor = "bg-green-50 text-green-700 border-green-100 dark:bg-green-950/20 dark:text-green-400 dark:border-green-900/30";
+                                                        break;
+                                                      default:
+                                                        return <span className="text-gray-400 dark:text-gray-600">—</span>;
+                                                    }
+
+                                                    return (
+                                                      <div className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full border text-[10px] font-bold uppercase tracking-wider ${bgColor}`}>
+                                                        <span className={`w-1.5 h-1.5 rounded-full ${dotColor}`}></span>
+                                                        {sev}
+                                                      </div>
+                                                    );
+                                                  };
+
+                                                  return (
+                                                    <tr key={itemIdx} className="hover:bg-gray-50/50 dark:hover:bg-gray-900/30 transition-colors">
+                                                      <td className="px-5 py-3">
+                                                        <span className={`inline-flex px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase border ${
+                                                          goodsItem.type === "Pickup"
+                                                            ? "bg-blue-50/70 text-blue-700 border-blue-100 dark:bg-blue-950/20 dark:text-blue-400 dark:border-blue-900/30"
+                                                            : "bg-purple-50/70 text-purple-700 border-purple-100 dark:bg-purple-950/20 dark:text-purple-400 dark:border-purple-900/30"
+                                                        }`}>
+                                                          {goodsItem.type}
+                                                        </span>
+                                                      </td>
+                                                      <td className="px-5 py-3 font-medium text-gray-900 dark:text-gray-200">
+                                                        {activeStep.location}
+                                                      </td>
+                                                      <td className="px-5 py-3 text-gray-750 dark:text-gray-300 font-semibold">
+                                                        {goodsItem.name}
+                                                      </td>
+                                                      <td className="px-5 py-3">
+                                                        <span className={`inline-flex px-2 py-0.5 rounded text-[11px] font-bold ${
+                                                          goodsItem.type === "Pickup"
+                                                            ? "bg-blue-50/30 text-blue-600 border border-blue-100 dark:bg-blue-950/10 dark:text-blue-400 dark:border-blue-900/20"
+                                                            : "bg-purple-50/30 text-purple-600 border border-purple-100 dark:bg-purple-950/10 dark:text-purple-400 dark:border-purple-900/20"
+                                                        }`}>
+                                                          {goodsItem.quantity}
+                                                        </span>
+                                                      </td>
+                                                      <td className="px-5 py-3 text-gray-700 dark:text-gray-300 font-medium">
+                                                        {executionRemarksText}
+                                                      </td>
+                                                      <td className="px-5 py-3">
+                                                        {getSeverityBadge(severity)}
+                                                      </td>
+                                                      <td className="px-5 py-3 text-gray-550 dark:text-gray-450">
+                                                        {activeStep.time}
+                                                      </td>
+                                                      <td className="px-5 py-3">
+                                                        <span className={`inline-flex px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider border ${
+                                                          activeStep.status === "completed"
+                                                            ? "bg-green-50 text-green-700 border-green-100 dark:bg-green-950/20 dark:text-green-400 dark:border-green-900/20"
+                                                            : activeStep.status === "current"
+                                                              ? "bg-primary-50 text-primary-700 border-primary-100 dark:bg-primary-950/20 dark:text-primary-400 dark:border-primary-900/20 font-extrabold animate-pulse"
+                                                              : "bg-gray-50 text-gray-400 border-gray-100 dark:bg-[#1b1b1b] dark:text-gray-500"
+                                                        }`}>
+                                                          {activeStep.status === "completed" 
+                                                            ? "Completed" 
+                                                            : activeStep.status === "current" 
+                                                              ? "Active Current" 
+                                                              : "Pending"}
+                                                          {hasPartialWarning && " ⚠ Partial"}
+                                                        </span>
+                                                      </td>
+                                                      <td className="px-5 py-3 text-right">
+                                                        <button
+                                                          onClick={() => {
+                                                            setSelectedCargoItem({
+                                                              goodsItem,
+                                                              itemIdx,
+                                                              stopIdx: activeStopIdx,
+                                                              tripId: trip.id,
+                                                              location: activeStep.location
+                                                            });
+                                                            setActualQuantity(execution ? execution.actualQuantity : plannedVal);
+                                                            setExecutionReason(execution ? execution.reason : "No Discrepancy");
+                                                            setExecutionRemarksState(execution ? execution.remarks : "");
+                                                            setActiveModal("execution-details");
+                                                          }}
+                                                          className="text-primary-700 hover:text-primary-800 dark:text-primary-400 dark:hover:text-primary-300 font-bold hover:underline cursor-pointer"
+                                                        >
+                                                          {execution ? "Edit" : "Add"}
+                                                        </button>
+                                                      </td>
+                                                    </tr>
+                                                  );
+                                                })}
+                                              </tbody>
+                                            </table>
+                                          </div>
+                                        )}
+                                      </div>
+                                    ) : null}
+                                      </>
+                                    );
+                                  })()}
                           </div>
                         </td>
                       </tr>
