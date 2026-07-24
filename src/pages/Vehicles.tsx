@@ -1,6 +1,7 @@
 import React, { useState, useMemo, useEffect } from "react";
 import { Driver, Vehicle } from "../types";
 import { BusinessRules } from "../lib/businessRules";
+import { vehicleService } from "../services/vehicle.service";
 import { ListTable, Column } from "../components/layout/ListTable";
 import {
   Search,
@@ -213,6 +214,30 @@ const Vehicles: React.FC = () => {
     }
     return initialVehicles;
   });
+
+  // Sync vehicles with vehicleService / Supabase
+  useEffect(() => {
+    let isMounted = true;
+    vehicleService.getVehicles().then((data) => {
+      if (isMounted && data && data.length > 0) {
+        setVehicles(data);
+      }
+    });
+
+    const handleDataChange = () => {
+      vehicleService.getVehicles().then((data) => {
+        if (isMounted && data) {
+          setVehicles(data);
+        }
+      });
+    };
+
+    window.addEventListener("tms_data_changed", handleDataChange);
+    return () => {
+      isMounted = false;
+      window.removeEventListener("tms_data_changed", handleDataChange);
+    };
+  }, []);
 
   // Sync vehicles to localStorage
   useEffect(() => {
@@ -457,12 +482,14 @@ const Vehicles: React.FC = () => {
     setNewViewName("");
   };
 
-  const handleDeleteVehicle = (id: string) => {
+  const handleDeleteVehicle = async (id: string) => {
     if (confirm(`Are you sure you want to remove vehicle (${id}) from the fleet?`)) {
       const updatedVehicles = vehicles.filter((v) => v.id !== id);
       setVehicles(updatedVehicles);
       if (selectedVehicleId === id) setSelectedVehicleId(null);
       setOpenVehicleMenu(null);
+
+      await vehicleService.deleteVehicle(id);
 
       // Relational sync: unassign from any driver
       const updatedDrivers = drivers.map(d => {
@@ -476,7 +503,7 @@ const Vehicles: React.FC = () => {
     }
   };
 
-  const handleAddSubmit = (e: React.FormEvent) => {
+  const handleAddSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const nextId = `VEH-${String(vehicles.length + 1).padStart(3, "0")}`;
     const vehicleToAdd: Vehicle = {
@@ -490,6 +517,7 @@ const Vehicles: React.FC = () => {
     };
 
     setVehicles([vehicleToAdd, ...vehicles]);
+    await vehicleService.createVehicle(vehicleToAdd);
 
     setIsAddDrawerOpen(false);
     // Reset form
@@ -508,11 +536,12 @@ const Vehicles: React.FC = () => {
     });
   };
 
-  const handleEditSubmit = (e: React.FormEvent) => {
+  const handleEditSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!editingVehicle) return;
 
     setVehicles(vehicles.map((v) => (v.id === editingVehicle.id ? editingVehicle : v)));
+    await vehicleService.updateVehicle(editingVehicle);
 
     setIsEditModalOpen(false);
     setEditingVehicle(null);
@@ -1139,7 +1168,9 @@ const Vehicles: React.FC = () => {
                                       if (!result.valid) {
                                         alert(result.message);
                                       } else {
-                                        setVehicles(vehicles.map(v => v.id === vehicle.id ? { ...v, status: "Maintenance" } : v));
+                                        const updated = { ...vehicle, status: "Maintenance" as const };
+                                        setVehicles(vehicles.map(v => v.id === vehicle.id ? updated : v));
+                                        vehicleService.updateVehicle(updated);
                                         setOpenVehicleMenu(null);
                                       }
                                     }}
@@ -1156,7 +1187,9 @@ const Vehicles: React.FC = () => {
                                       if (onActiveTrip) {
                                         alert(`Error: Cannot mark vehicle ${vehicle.id} as Available because it is currently assigned to an active trip.`);
                                       } else {
-                                        setVehicles(vehicles.map(v => v.id === vehicle.id ? { ...v, status: "Available" } : v));
+                                        const updated = { ...vehicle, status: "Available" as const };
+                                        setVehicles(vehicles.map(v => v.id === vehicle.id ? updated : v));
+                                        vehicleService.updateVehicle(updated);
                                       }
                                       setOpenVehicleMenu(null);
                                     }}
@@ -1167,7 +1200,9 @@ const Vehicles: React.FC = () => {
 
                                   <button
                                     onClick={() => {
-                                      setVehicles(vehicles.map(v => v.id === vehicle.id ? { ...v, status: "Out of Service" } : v));
+                                      const updated = { ...vehicle, status: "Out of Service" as const };
+                                      setVehicles(vehicles.map(v => v.id === vehicle.id ? updated : v));
+                                      vehicleService.updateVehicle(updated);
                                       setOpenVehicleMenu(null);
                                     }}
                                     className="w-full px-3 py-2 hover:bg-gray-50 dark:hover:bg-gray-800 flex items-center gap-2 cursor-pointer"
