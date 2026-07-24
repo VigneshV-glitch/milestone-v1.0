@@ -11,9 +11,11 @@ import {
   calculateSeverity,
   getGoodsForStep,
   getSpecificGoodsList,
-  parsePlannedQuantity
+  parsePlannedQuantity,
+  getDefaultActiveStopIndex
 } from "../utils/businessRules";
-import { DelayReason, Severity, DelayEvent } from "../types";
+import { DelayReason, Severity, DelayEvent, TripCargo, CargoExecutionEvent, ExecutionType, ExecutionStatus, CargoStatus } from "../types";
+import { tripService } from "../services/trip.service";
 import {
   Search,
   Filter,
@@ -434,9 +436,21 @@ const Trips: React.FC = () => {
     location: string;
   } | null>(null);
 
+  const [selectedCargoForExecution, setSelectedCargoForExecution] = useState<{
+    cargo: TripCargo;
+    tripId: string;
+    stopId?: string;
+    stopIdx: number;
+    stopType: "Pickup" | "Delivery" | "Transit";
+    location: string;
+    defaultExecutionType: ExecutionType;
+  } | null>(null);
+
+  const [executionTypeInput, setExecutionTypeInput] = useState<ExecutionType>("Pickup");
   const [actualQuantity, setActualQuantity] = useState<number>(0);
   const [executionReason, setExecutionReason] = useState<string>("No Discrepancy");
   const [executionRemarks, setExecutionRemarksState] = useState<string>("");
+  const [performedByInput, setPerformedByInput] = useState<string>("Dispatcher");
 
   const tripDateRef = React.useRef<HTMLInputElement>(null);
   const expectedDeliveryRef = React.useRef<HTMLInputElement>(null);
@@ -624,7 +638,7 @@ const Trips: React.FC = () => {
   >(null);
   const [openTripMenu, setOpenTripMenu] = useState<string | null>(null);
   const [expandedTripId, setExpandedTripId] = useState<string | null>(null);
-  const [selectedStopIdx, setSelectedStopIdx] = useState<number | null>(null);
+  const [selectedStopMap, setSelectedStopMap] = useState<Record<string, number>>({});
   const [sortConfig, setSortConfig] = useState<{
     field: string;
     direction: "asc" | "desc" | null;
@@ -1344,10 +1358,8 @@ const Trips: React.FC = () => {
                           onClick={() => {
                             if (isExpanded) {
                               setExpandedTripId(null);
-                              setSelectedStopIdx(null);
                             } else {
                               setExpandedTripId(trip.id);
-                              setSelectedStopIdx(0);
                             }
                           }}
                         >
@@ -1394,7 +1406,7 @@ const Trips: React.FC = () => {
                                   time: trip.date || "Scheduled",
                                   status: trip.status === "Scheduled" ? "pending" : "completed",
                                   goodsType: trip.loadType || "General Cargo",
-                                  quantity: "50 Pallets"
+                                  quantity: "250 Boxes"
                                 },
                                 {
                                   location: trip.destination || "Destination Facility",
@@ -1402,10 +1414,10 @@ const Trips: React.FC = () => {
                                   time: trip.expectedDelivery || trip.eta || "Scheduled",
                                   status: trip.status === "Completed" ? "completed" : trip.status === "In Transit" ? "current" : "pending",
                                   goodsType: trip.loadType || "General Cargo",
-                                  quantity: "50 Pallets"
+                                  quantity: "250 Boxes"
                                 }
                               ];
-                          const completedCount = trip.routeProgress?.completedCount ?? routeSteps.filter((s: any) => s.status === "completed").length;
+                          const completedCount = routeSteps.filter((s: any) => s.status === "completed").length;
                           return (
                             <div className="flex items-center gap-2.5">
                               <div className="flex flex-col">
@@ -1436,10 +1448,8 @@ const Trips: React.FC = () => {
                             onClick={() => {
                               if (expandedTripId === trip.id) {
                                 setExpandedTripId(null);
-                                setSelectedStopIdx(null);
                               } else {
                                 setExpandedTripId(trip.id);
-                                setSelectedStopIdx(0);
                               }
                             }}
                             className="text-gray-400 hover:text-primary-600 dark:hover:text-primary-400 transition-colors p-1.5 rounded hover:bg-gray-100 dark:hover:bg-[#2a2a2a] cursor-pointer"
@@ -1489,7 +1499,7 @@ const Trips: React.FC = () => {
                                       time: trip.date || "Scheduled",
                                       status: trip.status === "Scheduled" ? "pending" : "completed",
                                       goodsType: trip.loadType || "General Cargo",
-                                      quantity: "50 Pallets"
+                                      quantity: "250 Boxes"
                                     },
                                     {
                                       location: trip.destination || "Destination Facility",
@@ -1497,13 +1507,14 @@ const Trips: React.FC = () => {
                                       time: trip.expectedDelivery || trip.eta || "Scheduled",
                                       status: trip.status === "Completed" ? "completed" : trip.status === "In Transit" ? "current" : "pending",
                                       goodsType: trip.loadType || "General Cargo",
-                                      quantity: "50 Pallets"
+                                      quantity: "250 Boxes"
                                     }
                                   ];
 
-                              const activeStopIdx = (selectedStopIdx !== null && routeSteps[selectedStopIdx])
-                                ? selectedStopIdx
-                                : 0;
+                              const defaultActiveStopIdx = getDefaultActiveStopIndex(trip, routeSteps);
+                              const activeStopIdx = (selectedStopMap[trip.id] !== undefined && routeSteps[selectedStopMap[trip.id]])
+                                ? selectedStopMap[trip.id]
+                                : defaultActiveStopIdx;
 
                               const activeStep = routeSteps[activeStopIdx];
 
@@ -1523,7 +1534,7 @@ const Trips: React.FC = () => {
                                               <React.Fragment key={index}>
                                                 {/* Step Column */}
                                                 <div
-                                                  onClick={() => setSelectedStopIdx(index)}
+                                                  onClick={() => setSelectedStopMap(prev => ({ ...prev, [trip.id]: index }))}
                                                   className={`flex flex-col items-center text-center cursor-pointer select-none transition-all duration-300 rounded-2xl p-3 pt-4 max-w-[110px] flex-1 ${
                                                     isSelected
                                                       ? "bg-primary-50/15 dark:bg-primary-950/10 border border-primary-100 dark:border-primary-500/25 shadow-xs scale-[1.01]"
@@ -1626,6 +1637,8 @@ const Trips: React.FC = () => {
                                                   <th className="px-5 py-2.5">Location</th>
                                                   <th className="px-5 py-2.5">Cargo Commodity</th>
                                                   <th className="px-5 py-2.5">Planned Qty</th>
+                                                  <th className="px-5 py-2.5">Actual Qty</th>
+                                                  <th className="px-5 py-2.5">Remaining Qty</th>
                                                   <th className="px-5 py-2.5">Execution Remarks</th>
                                                   <th className="px-5 py-2.5">Severity</th>
                                                   <th className="px-5 py-2.5">Time/ETA</th>
@@ -1641,23 +1654,37 @@ const Trips: React.FC = () => {
                                                   routeSteps.length
                                                 ).map((goodsItem, itemIdx) => {
                                                   const execKey = `${activeStopIdx}_${itemIdx}`;
-                                                  const execution = trip.executions?.[execKey];
+                                                  const execution = trip.executions?.[execKey] 
+                                                    || trip.executions?.[`${activeStopIdx}_${itemIdx + 1}`] 
+                                                    || trip.executions?.[`${activeStopIdx + 1}_${itemIdx + 1}`] 
+                                                    || trip.executions?.[`${activeStopIdx + 1}_${itemIdx}`]
+                                                    || trip.executions?.[`1_1`]
+                                                    || trip.executions?.[`0_0`]
+                                                    || trip.executions?.[`0_1`]
+                                                    || trip.executions?.[`1_0`]
+                                                    || (trip.executions && Object.keys(trip.executions).length > 0 ? Object.values(trip.executions)[0] : undefined);
                                                   
                                                   let executionRemarksText = "—";
+                                                  let actualQtyText = "—";
+                                                  let remainingQtyText = "—";
                                                   let hasPartialWarning = false;
 
                                                   const { value: plannedVal, unit } = parsePlannedQuantity(goodsItem.quantity);
 
                                                   if (execution) {
-                                                    const actualVal = execution.actualQuantity;
+                                                    const actualVal = typeof execution.actualQuantity === 'number' ? execution.actualQuantity : (parseInt(execution.actualQuantity, 10) || 0);
+                                                    actualQtyText = `${actualVal} ${unit}`;
                                                     const reason = execution.reason;
                                                     const diff = plannedVal - actualVal;
+                                                    remainingQtyText = `${Math.max(0, diff)} ${unit}`;
                                                     
                                                     if (actualVal < plannedVal) {
                                                       hasPartialWarning = true;
                                                     }
 
-                                                    if (diff === 0) {
+                                                    if (execution.remarks) {
+                                                      executionRemarksText = execution.remarks;
+                                                    } else if (diff === 0) {
                                                       executionRemarksText = "Completed without discrepancy";
                                                     } else if (diff < 0) {
                                                       const overCount = Math.abs(diff);
@@ -1673,7 +1700,7 @@ const Trips: React.FC = () => {
                                                       } else if (reason === "Customer Rejected") {
                                                         executionRemarksText = `${actionPast} ${actualVal} / ${plannedVal} ${unitLowercase} • Customer rejected remaining`;
                                                       } else {
-                                                        executionRemarksText = `${actionPast} ${actualVal} / ${plannedVal} ${unitLowercase} • ${diff} ${reason.toLowerCase()}`;
+                                                        executionRemarksText = `${actionPast} ${actionPast.toLowerCase()} ${actualVal} / ${plannedVal} ${unitLowercase} • ${diff} ${reason ? reason.toLowerCase() : 'shortage'}`;
                                                       }
                                                     }
                                                   }
@@ -1746,6 +1773,16 @@ const Trips: React.FC = () => {
                                                         }`}>
                                                           {goodsItem.quantity}
                                                         </span>
+                                                      </td>
+                                                      <td className="px-5 py-3 font-semibold text-gray-800 dark:text-gray-200">
+                                                        {actualQtyText}
+                                                      </td>
+                                                      <td className="px-5 py-3 font-semibold text-gray-800 dark:text-gray-200">
+                                                        {hasPartialWarning ? (
+                                                          <span className="text-amber-600 dark:text-amber-400 font-bold">{remainingQtyText}</span>
+                                                        ) : (
+                                                          remainingQtyText
+                                                        )}
                                                       </td>
                                                       <td className="px-5 py-3 text-gray-700 dark:text-gray-300 font-medium">
                                                         {executionRemarksText}
@@ -2463,7 +2500,7 @@ const Trips: React.FC = () => {
                 Cancel
               </button>
               <button
-                onClick={() => {
+                onClick={async () => {
                   const updatedTrip = { ...trips.find(t => t.id === selectedCargoItem.tripId) };
                   if (!updatedTrip.id) return;
 
@@ -2479,8 +2516,23 @@ const Trips: React.FC = () => {
                     }
                   };
 
+                  const targetCargo = updatedTrip.cargos?.[0] || { id: `CRG-${updatedTrip.id}-01`, plannedQuantity: 250 };
+                  const plannedVal = parsePlannedQuantity(selectedCargoItem.goodsItem.quantity).value || 250;
+
+                  await tripService.recordCargoExecution({
+                    cargoId: targetCargo.id,
+                    tripId: updatedTrip.id,
+                    stopIdx: selectedCargoItem.stopIdx,
+                    executionType: selectedCargoItem.goodsItem.type === "Pickup" ? "Pickup" : "Drop",
+                    plannedQty: plannedVal,
+                    actualQty: actualQuantity,
+                    reason: executionReason,
+                    remarks: executionRemarks,
+                    performedBy: "Dispatcher"
+                  });
+
                   saveTrip(updatedTrip as any);
-                  showFeedback("Execution details saved successfully.", "success");
+                  showFeedback("Execution event recorded and saved successfully.", "success");
                   setActiveModal(null);
                   setSelectedCargoItem(null);
                 }}

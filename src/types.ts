@@ -113,6 +113,78 @@ export interface DelayEvent {
   status: "Open";
 }
 
+export type ExecutionType = 
+  | "Pickup"
+  | "Drop"
+  | "Partial Pickup"
+  | "Partial Drop"
+  | "Damage"
+  | "Shortage"
+  | "Overage"
+  | "Rejected"
+  | "Cancelled"
+  | "Returned";
+
+export type ExecutionStatus = "Completed" | "Partial" | "Failed" | "Pending";
+
+export type CargoStatus = 
+  | "Planned" 
+  | "Picked Up" 
+  | "Partially Picked Up" 
+  | "In Transit" 
+  | "Delivered" 
+  | "Partially Delivered" 
+  | "Damaged" 
+  | "Shortage" 
+  | "Overage" 
+  | "Rejected" 
+  | "Cancelled" 
+  | "Returned";
+
+export interface CargoExecutionEvent {
+  id: string;
+  cargoId: string;
+  tripId: string;
+  stopId?: string;
+  stopIdx?: number;
+  executionType: ExecutionType;
+  executionStatus: ExecutionStatus;
+  plannedQty: number;
+  actualQty: number;
+  variance: number;
+  reason?: string;
+  remarks?: string;
+  performedBy?: string;
+  timestamp: string;
+  latitude?: number;
+  longitude?: number;
+  photoUrl?: string;
+  signatureUrl?: string;
+  createdAt?: string;
+}
+
+export interface TripCargo {
+  id: string;
+  tripId: string;
+  pickupStopId?: string;
+  deliveryStopId?: string;
+  pickupStopIdx?: number;
+  deliveryStopIdx?: number;
+  sku: string;
+  description: string;
+  weight?: string;
+  volume?: string;
+  plannedQuantity: number;
+  currentQuantity: number;
+  unit: string;
+  status: CargoStatus;
+  remarks?: string;
+  createdBy?: string;
+  createdAt?: string;
+  updatedAt?: string;
+  executionEvents?: CargoExecutionEvent[];
+}
+
 export interface Execution {
   id: string;
   tripId: string;
@@ -126,13 +198,17 @@ export interface Execution {
 }
 
 export interface RouteStep {
+  id?: string;
+  stopIdx?: number;
   location: string;
-  type: string;
+  type: string; // 'Pickup' | 'Delivery' | 'Transit'
   time: string;
   status: string;
   goodsType?: string;
   quantity?: string;
   cargoItems?: any[];
+  pickupCargo?: TripCargo[];
+  deliveryCargo?: TripCargo[];
 }
 
 export interface RouteProgress {
@@ -171,7 +247,9 @@ export interface Trip {
   inTransitTime: string;
   deliveredTime: string;
   routeProgress: RouteProgress;
+  cargos?: TripCargo[];
   executions?: Record<string, any>;
+  executionEvents?: CargoExecutionEvent[];
   delayEvents?: DelayEvent[];
 }
 

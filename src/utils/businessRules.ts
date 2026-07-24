@@ -21,11 +21,19 @@ export const getGoodsForStep = (step: any, stopIdx: number, trip?: any, totalSte
   // 1. Check for real cargo items array stored on the step from DB
   const rawItems = step.cargoItems || step.cargo_items || step.goods || step.items;
   if (Array.isArray(rawItems) && rawItems.length > 0) {
-    return rawItems.map((item: any, idx: number) => ({
-      name: item.name || item.cargoCommodity || item.commodity || item.description || step.goodsType || trip?.loadType || "General Cargo",
-      quantity: item.quantity || item.plannedQuantity || step.quantity || "1 Load",
-      type: (item.type || step.type || (stopIdx === 0 ? "Pickup" : "Delivery")) as "Pickup" | "Delivery"
-    }));
+    return rawItems.map((item: any, idx: number) => {
+      const name = item.name || item.cargoCommodity || item.commodity || item.description || step.goodsType || trip?.loadType || "General Cargo";
+      let quantity = item.quantity || item.plannedQuantity || item.planned_quantity;
+      if (!quantity && item.qty !== undefined) {
+        quantity = `${item.qty} Units`;
+      }
+      if (!quantity) {
+        quantity = step.quantity || "1 Load";
+      }
+      const defaultType: "Pickup" | "Delivery" = step.type === "Delivery" ? "Delivery" : (stopIdx === 0 ? "Pickup" : "Delivery");
+      const type = (item.type || defaultType) as "Pickup" | "Delivery";
+      return { name, quantity, type };
+    });
   }
 
   // 2. Return real commodity name & quantity directly from the step or trip DB record
@@ -34,6 +42,41 @@ export const getGoodsForStep = (step: any, stopIdx: number, trip?: any, totalSte
   const type: "Pickup" | "Delivery" = step.type === "Pickup" ? "Pickup" : step.type === "Delivery" ? "Delivery" : (stopIdx === 0 ? "Pickup" : "Delivery");
 
   return [{ name, quantity, type }];
+};
+
+/**
+ * Dynamically determines the active stop index based on trip business data
+ */
+export const getDefaultActiveStopIndex = (trip: Trip, routeSteps: any[]): number => {
+  if (!routeSteps || routeSteps.length === 0) return 0;
+
+  // 1. Check if any step explicitly has status === 'current' or 'active' or 'in_transit'
+  const currentIndex = routeSteps.findIndex(
+    (s: any) => s.status === 'current' || s.status === 'active' || s.status === 'in_transit'
+  );
+  if (currentIndex !== -1) return currentIndex;
+
+  // 2. If trip status is Completed or Delivered, highlight the last stop
+  if (trip.status === 'Completed' || trip.status === 'Delivered') {
+    return routeSteps.length - 1;
+  }
+
+  // 3. Check routeProgress.completedCount
+  if (typeof trip.routeProgress?.completedCount === 'number') {
+    const completed = trip.routeProgress.completedCount;
+    if (completed >= 0 && completed < routeSteps.length) {
+      return completed;
+    }
+    if (completed >= routeSteps.length) {
+      return routeSteps.length - 1;
+    }
+  }
+
+  // 4. Find first non-completed step
+  const firstPending = routeSteps.findIndex((s: any) => s.status !== 'completed');
+  if (firstPending !== -1) return firstPending;
+
+  return 0;
 };
 
 export const getSpecificGoodsList = (goodsType: string, stopIdx: number, tripId: string, totalSteps: number, step?: any, trip?: any) => {

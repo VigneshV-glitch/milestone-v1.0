@@ -109,13 +109,53 @@ CREATE TABLE IF NOT EXISTS public.trip_stops (
     type VARCHAR(50) NOT NULL,
     time VARCHAR(100),
     status VARCHAR(50) DEFAULT 'pending',
-    goods_type VARCHAR(255),
-    quantity VARCHAR(100),
-    cargo_items JSONB DEFAULT '[]'::jsonb,
+    completed_at TIMESTAMPTZ,
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- 6. CARGO EXECUTION TABLE
+-- 6. TRIP CARGO MASTER TABLE
+CREATE TABLE IF NOT EXISTS public.trip_cargo (
+    id VARCHAR(100) PRIMARY KEY DEFAULT 'CRG-' || gen_random_uuid()::text,
+    trip_id VARCHAR(50) NOT NULL REFERENCES public.trips(id) ON DELETE CASCADE,
+    pickup_stop_id UUID REFERENCES public.trip_stops(id) ON DELETE SET NULL,
+    delivery_stop_id UUID REFERENCES public.trip_stops(id) ON DELETE SET NULL,
+    sku VARCHAR(100) NOT NULL DEFAULT 'SKU-GENERAL',
+    description TEXT NOT NULL DEFAULT 'General Freight Cargo',
+    weight VARCHAR(50) DEFAULT '0 kg',
+    volume VARCHAR(50) DEFAULT '0 m3',
+    planned_quantity INT NOT NULL DEFAULT 1,
+    current_quantity INT NOT NULL DEFAULT 0,
+    unit VARCHAR(50) NOT NULL DEFAULT 'Boxes',
+    status VARCHAR(50) NOT NULL DEFAULT 'Planned',
+    remarks TEXT,
+    created_by VARCHAR(255) DEFAULT 'Dispatcher',
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- 7. CARGO EXECUTION EVENTS TABLE
+CREATE TABLE IF NOT EXISTS public.cargo_execution_events (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    cargo_id VARCHAR(100) NOT NULL REFERENCES public.trip_cargo(id) ON DELETE CASCADE,
+    trip_id VARCHAR(50) NOT NULL REFERENCES public.trips(id) ON DELETE CASCADE,
+    stop_id UUID REFERENCES public.trip_stops(id) ON DELETE CASCADE,
+    execution_type VARCHAR(50) NOT NULL, -- Pickup, Drop, Partial Pickup, Partial Drop, Damage, Shortage, Overage, Rejected, Cancelled, Returned
+    execution_status VARCHAR(50) NOT NULL DEFAULT 'Completed', -- Completed, Partial, Failed, Pending
+    planned_qty INT NOT NULL DEFAULT 0,
+    actual_qty INT NOT NULL DEFAULT 0,
+    variance INT NOT NULL DEFAULT 0,
+    reason VARCHAR(100),
+    remarks TEXT,
+    performed_by VARCHAR(255) DEFAULT 'Dispatcher',
+    timestamp TIMESTAMPTZ DEFAULT NOW(),
+    latitude NUMERIC(10, 7),
+    longitude NUMERIC(10, 7),
+    photo_url TEXT,
+    signature_url TEXT,
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- LEGACY CARGO EXECUTION TABLE (BACKWARD COMPATIBILITY ARCHIVE)
 CREATE TABLE IF NOT EXISTS public.cargo_execution (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     trip_id VARCHAR(50) REFERENCES public.trips(id) ON DELETE CASCADE,
@@ -177,6 +217,8 @@ ALTER TABLE public.drivers ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.vehicles ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.trips ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.trip_stops ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.trip_cargo ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.cargo_execution_events ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.cargo_execution ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.delay_events ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.activities ENABLE ROW LEVEL SECURITY;
@@ -189,6 +231,8 @@ CREATE POLICY "Allow all access to drivers" ON public.drivers FOR ALL USING (tru
 CREATE POLICY "Allow all access to vehicles" ON public.vehicles FOR ALL USING (true);
 CREATE POLICY "Allow all access to trips" ON public.trips FOR ALL USING (true);
 CREATE POLICY "Allow all access to trip_stops" ON public.trip_stops FOR ALL USING (true);
+CREATE POLICY "Allow all access to trip_cargo" ON public.trip_cargo FOR ALL USING (true);
+CREATE POLICY "Allow all access to cargo_execution_events" ON public.cargo_execution_events FOR ALL USING (true);
 CREATE POLICY "Allow all access to cargo_execution" ON public.cargo_execution FOR ALL USING (true);
 CREATE POLICY "Allow all access to delay_events" ON public.delay_events FOR ALL USING (true);
 CREATE POLICY "Allow all access to activities" ON public.activities FOR ALL USING (true);
@@ -197,6 +241,8 @@ CREATE POLICY "Allow all access to settings" ON public.settings FOR ALL USING (t
 
 -- ENABLE REALTIME ON TABLES
 ALTER PUBLICATION supabase_realtime ADD TABLE public.trips;
+ALTER PUBLICATION supabase_realtime ADD TABLE public.trip_cargo;
+ALTER PUBLICATION supabase_realtime ADD TABLE public.cargo_execution_events;
 ALTER PUBLICATION supabase_realtime ADD TABLE public.vehicles;
 ALTER PUBLICATION supabase_realtime ADD TABLE public.drivers;
 ALTER PUBLICATION supabase_realtime ADD TABLE public.activities;
